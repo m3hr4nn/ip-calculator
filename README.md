@@ -3,6 +3,7 @@
 A simple, static **IP subnet calculator** built with **HTML, CSS, and JavaScript**.  
 It calculates network address, broadcast address, usable hosts, and provides a **CIDR-to-Subnet Mask reference table**.
 
+https://m3hr4nn.github.io/ip-calculator/
 ---
 
 ## **Features**
