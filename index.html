@@ -4,48 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IP Subnet Calculator</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f5f5f5;
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            max-width: 500px;
-            background: #fff;
-            padding: 20px;
-            margin: auto;
-            border-radius: 8px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-        }
-        h1 {
-            text-align: center;
-        }
-        input, button {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-        }
-        button {
-            background: #007bff;
-            color: #fff;
-            border: none;
-            cursor: pointer;
-        }
-        button:hover {
-            background: #0056b3;
-        }
-        .result {
-            background: #f0f0f0;
-            padding: 10px;
-            border-radius: 4px;
-            margin-top: 10px;
-            white-space: pre-line;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
@@ -54,6 +13,18 @@
         <input type="number" id="cidr" placeholder="CIDR (e.g., 24)" min="0" max="32">
         <button onclick="calculate()">Calculate</button>
         <div id="result" class="result"></div>
+
+        <h2>CIDR to Subnet Mask Table</h2>
+        <table id="cidrTable">
+            <thead>
+                <tr>
+                    <th>CIDR</th>
+                    <th>Subnet Mask</th>
+                    <th>Hosts</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
     </div>
 
     <script>
@@ -93,12 +64,8 @@
 
             const ipBin = ipToBinary(ip);
             const maskBin = '1'.repeat(cidr).padEnd(32, '0');
-            const netBin = (parseInt(ipBin, 2) & parseInt(maskBin, 2))
-                            .toString(2)
-                            .padStart(32, '0');
-            const broadcastBin = (parseInt(netBin, 2) | (~parseInt(maskBin, 2) >>> 0))
-                                  .toString(2)
-                                  .padStart(32, '0');
+            const netBin = (parseInt(ipBin, 2) & parseInt(maskBin, 2)).toString(2).padStart(32, '0');
+            const broadcastBin = (parseInt(netBin, 2) | (~parseInt(maskBin, 2) >>> 0)).toString(2).padStart(32, '0');
 
             const network = binaryToIp(netBin);
             const broadcast = binaryToIp(broadcastBin);
@@ -145,6 +112,19 @@
                 return !isNaN(num) && num >= 0 && num <= 255;
             });
         }
+
+        function populateCIDRTable() {
+            const tbody = document.querySelector("#cidrTable tbody");
+            for (let i = 0; i <= 32; i++) {
+                const tr = document.createElement("tr");
+                const mask = cidrToMask(i);
+                const hosts = i < 31 ? Math.pow(2, 32 - i) - 2 : (i === 31 ? 2 : 1);
+                tr.innerHTML = `<td>/${i}</td><td>${mask}</td><td>${hosts}</td>`;
+                tbody.appendChild(tr);
+            }
+        }
+
+        populateCIDRTable();
     </script>
 </body>
 </html>
