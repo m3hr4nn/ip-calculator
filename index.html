@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP Subnet Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 500px;
+            background: #fff;
+            padding: 20px;
+            margin: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+        h1 {
+            text-align: center;
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        button {
+            background: #007bff;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            white-space: pre-line;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>IP Subnet Calculator</h1>
+        <input type="text" id="ip" placeholder="Enter IP (e.g., 192.168.1.1)">
+        <input type="number" id="cidr" placeholder="CIDR (e.g., 24)" min="0" max="32">
+        <button onclick="calculate()">Calculate</button>
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        function ipToBinary(ip) {
+            return ip.split('.')
+                     .map(num => ('00000000' + parseInt(num, 10).toString(2)).slice(-8))
+                     .join('');
+        }
+
+        function binaryToIp(bin) {
+            return [
+                parseInt(bin.slice(0, 8), 2),
+                parseInt(bin.slice(8, 16), 2),
+                parseInt(bin.slice(16, 24), 2),
+                parseInt(bin.slice(24, 32), 2)
+            ].join('.');
+        }
+
+        function cidrToMask(cidr) {
+            return binaryToIp('1'.repeat(cidr).padEnd(32, '0'));
+        }
+
+        function cidrToWildcard(cidr) {
+            const mask = cidrToMask(cidr).split('.').map(Number);
+            return mask.map(octet => 255 - octet).join('.');
+        }
+
+        function calculate() {
+            const ip = document.getElementById('ip').value.trim();
+            const cidr = parseInt(document.getElementById('cidr').value, 10);
+            const resultDiv = document.getElementById('result');
+
+            if (!isValidIP(ip) || isNaN(cidr) || cidr < 0 || cidr > 32) {
+                resultDiv.innerText = "Invalid IP or CIDR!";
+                return;
+            }
+
+            const ipBin = ipToBinary(ip);
+            const maskBin = '1'.repeat(cidr).padEnd(32, '0');
+            const netBin = (parseInt(ipBin, 2) & parseInt(maskBin, 2))
+                            .toString(2)
+                            .padStart(32, '0');
+            const broadcastBin = (parseInt(netBin, 2) | (~parseInt(maskBin, 2) >>> 0))
+                                  .toString(2)
+                                  .padStart(32, '0');
+
+            const network = binaryToIp(netBin);
+            const broadcast = binaryToIp(broadcastBin);
+            const totalHosts = Math.pow(2, 32 - cidr);
+            const usableHosts = cidr < 31 ? totalHosts - 2 : (cidr === 31 ? 2 : 1);
+            const firstHost = cidr < 31 ? incrementIp(network) : network;
+            const lastHost = cidr < 31 ? decrementIp(broadcast) : broadcast;
+            const subnetMask = cidrToMask(cidr);
+            const wildcardMask = cidrToWildcard(cidr);
+
+            resultDiv.innerText = 
+                `IP: ${ip}/${cidr}\n` +
+                `Subnet Mask: ${subnetMask}\n` +
+                `Wildcard Mask: ${wildcardMask}\n` +
+                `Network: ${network}\n` +
+                `Broadcast: ${broadcast}\n` +
+                `Total Addresses: ${totalHosts}\n` +
+                `Usable Hosts: ${usableHosts}\n` +
+                `Host Range: ${firstHost} - ${lastHost}`;
+        }
+
+        function incrementIp(ip) {
+            let parts = ip.split('.').map(Number);
+            for (let i = 3; i >= 0; i--) {
+                if (parts[i] < 255) { parts[i]++; break; }
+                else parts[i] = 0;
+            }
+            return parts.join('.');
+        }
+
+        function decrementIp(ip) {
+            let parts = ip.split('.').map(Number);
+            for (let i = 3; i >= 0; i--) {
+                if (parts[i] > 0) { parts[i]--; break; }
+                else parts[i] = 255;
+            }
+            return parts.join('.');
+        }
+
+        function isValidIP(ip) {
+            const parts = ip.split('.');
+            return parts.length === 4 && parts.every(p => {
+                const num = Number(p);
+                return !isNaN(num) && num >= 0 && num <= 255;
+            });
+        }
+    </script>
+</body>
+</html>
