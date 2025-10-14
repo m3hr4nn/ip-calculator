@@ -15,11 +15,13 @@
         <div id="result" class="result"></div>
 
         <h2>CIDR to Subnet Mask Table</h2>
+        <p style="color: #a0a0a0; font-size: 14px; margin-top: 10px;">Click any row to auto-fill the calculator</p>
         <table id="cidrTable">
             <thead>
                 <tr>
                     <th>CIDR</th>
                     <th>Subnet Mask</th>
+                    <th>Wildcard Mask</th>
                     <th>Hosts</th>
                 </tr>
             </thead>
@@ -196,8 +198,33 @@
             for (let i = 0; i <= 32; i++) {
                 const tr = document.createElement("tr");
                 const mask = cidrToMask(i);
+                const wildcard = cidrToWildcard(i);
                 const hosts = i < 31 ? Math.pow(2, 32 - i) - 2 : (i === 31 ? 2 : 1);
-                tr.innerHTML = `<td>/${i}</td><td>${mask}</td><td>${hosts}</td>`;
+
+                tr.innerHTML = `<td>/${i}</td><td>${mask}</td><td>${wildcard}</td><td>${hosts.toLocaleString()}</td>`;
+                tr.style.cursor = 'pointer';
+                tr.setAttribute('data-cidr', i);
+
+                // Add click handler to auto-fill calculator
+                tr.addEventListener('click', function() {
+                    const cidr = this.getAttribute('data-cidr');
+                    document.getElementById('cidr').value = cidr;
+
+                    // Scroll to top smoothly
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+                    // Focus on IP input for user convenience
+                    setTimeout(() => {
+                        document.getElementById('ip').focus();
+                    }, 500);
+
+                    // Add visual feedback
+                    this.style.background = 'rgba(212, 175, 55, 0.3)';
+                    setTimeout(() => {
+                        this.style.background = '';
+                    }, 300);
+                });
+
                 tbody.appendChild(tr);
             }
         }

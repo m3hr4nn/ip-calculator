@@ -131,7 +131,14 @@ table th {
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
+table tbody tr {
+    transition: all 0.2s ease;
+}
 table tbody tr:hover {
-    background: rgba(42, 82, 152, 0.15);
-    transition: background 0.2s ease;
+    background: rgba(42, 82, 152, 0.25);
+    transform: scale(1.01);
+    box-shadow: 0 2px 8px rgba(212, 175, 55, 0.2);
+}
+table tbody tr:active {
+    transform: scale(0.99);
 }
