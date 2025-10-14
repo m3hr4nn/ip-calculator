@@ -9,8 +9,8 @@
 <body>
     <div class="container">
         <h1>IP Subnet Calculator</h1>
-        <input type="text" id="ip" placeholder="Enter IP (e.g., 192.168.1.1)">
-        <input type="number" id="cidr" placeholder="CIDR (e.g., 24)" min="0" max="32">
+        <input type="text" id="ip" placeholder="Enter IP (e.g., 192.168.1.1 or 192.168.1.1/24)">
+        <input type="text" id="cidr" placeholder="CIDR or Subnet Mask (e.g., 24 or 255.255.255.0)">
         <button onclick="calculate()">Calculate</button>
         <div id="result" class="result"></div>
 
@@ -28,6 +28,20 @@
     </div>
 
     <script>
+        // Add Enter key listener
+        document.addEventListener('DOMContentLoaded', function() {
+            const ipInput = document.getElementById('ip');
+            const cidrInput = document.getElementById('cidr');
+
+            [ipInput, cidrInput].forEach(input => {
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        calculate();
+                    }
+                });
+            });
+        });
+
         function ipToBinary(ip) {
             return ip.split('.')
                      .map(num => ('00000000' + parseInt(num, 10).toString(2)).slice(-8))
@@ -52,17 +66,78 @@
             return mask.map(octet => 255 - octet).join('.');
         }
 
+        function subnetMaskToCidr(mask) {
+            // Convert subnet mask (e.g., 255.255.255.0) to CIDR (e.g., 24)
+            const parts = mask.split('.').map(Number);
+            if (parts.length !== 4 || !parts.every(p => p >= 0 && p <= 255)) {
+                return null;
+            }
+            const binary = parts.map(p => ('00000000' + p.toString(2)).slice(-8)).join('');
+            const cidr = binary.indexOf('0');
+            return cidr === -1 ? 32 : cidr;
+        }
+
+        function parseIpInput(input) {
+            // Parse IP input that may contain /CIDR notation
+            const slashIndex = input.indexOf('/');
+            if (slashIndex !== -1) {
+                const ip = input.substring(0, slashIndex).trim();
+                const cidr = input.substring(slashIndex + 1).trim();
+                return { ip, cidr };
+            }
+            return { ip: input, cidr: null };
+        }
+
+        function parseCidrInput(input) {
+            // Parse CIDR input that may be numeric or subnet mask format
+            input = input.trim();
+
+            // Check if it's a subnet mask (contains dots)
+            if (input.includes('.')) {
+                const cidr = subnetMaskToCidr(input);
+                if (cidr === null) {
+                    return null;
+                }
+                return cidr;
+            }
+
+            // Otherwise treat as numeric CIDR
+            const cidr = parseInt(input, 10);
+            if (isNaN(cidr) || cidr < 0 || cidr > 32) {
+                return null;
+            }
+            return cidr;
+        }
+
         function calculate() {
-            const ip = document.getElementById('ip').value.trim();
-            const cidr = parseInt(document.getElementById('cidr').value, 10);
+            const ipInputValue = document.getElementById('ip').value.trim();
+            const cidrInputValue = document.getElementById('cidr').value.trim();
             const resultDiv = document.getElementById('result');
 
-            if (!isValidIP(ip) || isNaN(cidr) || cidr < 0 || cidr > 32) {
-                resultDiv.innerText = "Invalid IP or CIDR!";
+            // Parse IP input (may contain /CIDR)
+            const { ip: parsedIp, cidr: embeddedCidr } = parseIpInput(ipInputValue);
+
+            // Determine CIDR: prefer embedded CIDR, fallback to input field
+            let cidr = null;
+            if (embeddedCidr !== null) {
+                cidr = parseCidrInput(embeddedCidr);
+            } else if (cidrInputValue) {
+                cidr = parseCidrInput(cidrInputValue);
+            }
+
+            // Validate
+            if (!isValidIP(parsedIp)) {
+                resultDiv.innerHTML = '<ul><li><strong>Error:</strong> Invalid IP address format!</li></ul>';
                 return;
             }
 
-            const ipBin = ipToBinary(ip);
+            if (cidr === null) {
+                resultDiv.innerHTML = '<ul><li><strong>Error:</strong> Invalid CIDR or Subnet Mask!</li></ul>';
+                return;
+            }
+
+            // Calculate subnet information
+            const ipBin = ipToBinary(parsedIp);
             const maskBin = '1'.repeat(cidr).padEnd(32, '0');
             const netBin = (parseInt(ipBin, 2) & parseInt(maskBin, 2)).toString(2).padStart(32, '0');
             const broadcastBin = (parseInt(netBin, 2) | (~parseInt(maskBin, 2) >>> 0)).toString(2).padStart(32, '0');
@@ -76,15 +151,18 @@
             const subnetMask = cidrToMask(cidr);
             const wildcardMask = cidrToWildcard(cidr);
 
-            resultDiv.innerText = 
-                `IP: ${ip}/${cidr}\n` +
-                `Subnet Mask: ${subnetMask}\n` +
-                `Wildcard Mask: ${wildcardMask}\n` +
-                `Network: ${network}\n` +
-                `Broadcast: ${broadcast}\n` +
-                `Total Addresses: ${totalHosts}\n` +
-                `Usable Hosts: ${usableHosts}\n` +
-                `Host Range: ${firstHost} - ${lastHost}`;
+            // Display results in bullet point format
+            resultDiv.innerHTML =
+                `<ul>
+                    <li><strong>IP Address:</strong> ${parsedIp}/${cidr}</li>
+                    <li><strong>Subnet Mask:</strong> ${subnetMask}</li>
+                    <li><strong>Wildcard Mask:</strong> ${wildcardMask}</li>
+                    <li><strong>Network Address:</strong> ${network}</li>
+                    <li><strong>Broadcast Address:</strong> ${broadcast}</li>
+                    <li><strong>Total Addresses:</strong> ${totalHosts.toLocaleString()}</li>
+                    <li><strong>Usable Hosts:</strong> ${usableHosts.toLocaleString()}</li>
+                    <li><strong>Host Range:</strong> ${firstHost} - ${lastHost}</li>
+                </ul>`;
         }
 
         function incrementIp(ip) {
