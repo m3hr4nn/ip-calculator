@@ -30,17 +30,52 @@
     </div>
 
     <script>
-        // Add Enter key listener
+        // Add Enter key listener and input validation
         document.addEventListener('DOMContentLoaded', function() {
             const ipInput = document.getElementById('ip');
             const cidrInput = document.getElementById('cidr');
 
+            // Enter key handler
             [ipInput, cidrInput].forEach(input => {
                 input.addEventListener('keypress', function(e) {
                     if (e.key === 'Enter') {
                         calculate();
                     }
                 });
+            });
+
+            // IP field validation and auto-disable CIDR field logic
+            ipInput.addEventListener('input', function(e) {
+                let value = e.target.value;
+
+                // Only allow digits, dots, and slash
+                value = value.replace(/[^0-9./]/g, '');
+
+                // Check if input contains '/' to disable CIDR field
+                if (value.includes('/')) {
+                    cidrInput.disabled = true;
+                    cidrInput.style.opacity = '0.5';
+                    cidrInput.style.cursor = 'not-allowed';
+                    cidrInput.value = '';
+                } else {
+                    cidrInput.disabled = false;
+                    cidrInput.style.opacity = '1';
+                    cidrInput.style.cursor = 'text';
+                }
+
+                // Update the input value with filtered characters
+                e.target.value = value;
+            });
+
+            // CIDR field validation
+            cidrInput.addEventListener('input', function(e) {
+                let value = e.target.value;
+
+                // Only allow digits and dots (for subnet mask or CIDR number)
+                value = value.replace(/[^0-9.]/g, '');
+
+                // Update the input value with filtered characters
+                e.target.value = value;
             });
         });
 
