@@ -138,14 +138,18 @@
                 return;
             }
 
-            // Calculate subnet information
-            const ipBin = ipToBinary(parsedIp);
-            const maskBin = '1'.repeat(cidr).padEnd(32, '0');
-            const netBin = (parseInt(ipBin, 2) & parseInt(maskBin, 2)).toString(2).padStart(32, '0');
-            const broadcastBin = (parseInt(netBin, 2) | (~parseInt(maskBin, 2) >>> 0)).toString(2).padStart(32, '0');
+            // Calculate subnet information using octet-based approach
+            const ipOctets = parsedIp.split('.').map(Number);
+            const maskOctets = cidrToMask(cidr).split('.').map(Number);
 
-            const network = binaryToIp(netBin);
-            const broadcast = binaryToIp(broadcastBin);
+            // Calculate network address by ANDing each octet
+            const networkOctets = ipOctets.map((octet, i) => octet & maskOctets[i]);
+
+            // Calculate broadcast address by ORing network with inverted mask
+            const broadcastOctets = networkOctets.map((octet, i) => octet | (255 - maskOctets[i]));
+
+            const network = networkOctets.join('.');
+            const broadcast = broadcastOctets.join('.');
             const totalHosts = Math.pow(2, 32 - cidr);
             const usableHosts = cidr < 31 ? totalHosts - 2 : (cidr === 31 ? 2 : 1);
             const firstHost = cidr < 31 ? incrementIp(network) : network;
